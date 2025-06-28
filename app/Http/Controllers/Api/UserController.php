@@ -39,9 +39,9 @@ class UserController extends Controller
             '_height_cm' => $user->_height_cm,
             '_activity_level' => $user->_activity_level,
             '_goal' => $user->_goal,
-            'goal_name' => $user->goal_name,            
+            'goal_name' => $user->goal_name,
             '_diet_type_id' => $user->_diet_type_id,
-            'diet_type' => $user->diet_type,          
+            'diet_type' => $user->diet_type,
             'allergens' => $allergens
         ]);
     }
@@ -153,5 +153,30 @@ class UserController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+    public function updateProfile(Request $request)
+    {
+        $user = JWTAuth::parseToken()->authenticate(); 
+
+        $validated = $request->validate([
+            '_full_name' => 'nullable|string|max:255',
+            '_dob' => 'nullable|date',
+            '_weight_kg' => 'nullable|numeric|min:0',
+            '_height_cm' => 'nullable|numeric|min:0',
+        ]);
+
+        $success = $this->userRepo->updateProfile($user->_id, $validated);
+
+        if (!$success) {
+            return response()->json(['status' => false, 'message' => 'Failed to update profile'], 500);
+        }
+
+        $updatedUser = $this->userRepo->getUserDetails($user->_id);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Profile updated successfully',
+            'data' => $updatedUser
+        ]);
     }
 }

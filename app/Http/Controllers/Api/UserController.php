@@ -28,18 +28,20 @@ class UserController extends Controller
         $allergens = $this->userRepo->getUserAllergens($id);
 
         return response()->json([
-            'id' => $user->_id,
-            'username' => $user->_username,
-            'email' => $user->_email,
-            'full_name' => $user->_full_name,
-            'avatar' => $user->_avatar,
-            'dob' => $user->_dob,
-            'gender' => $user->_gender,
-            'weight_kg' => $user->_weight_kg,
-            'height_cm' => $user->_height_cm,
-            'activity_level' => $user->_activity_level,
-            'goal' => $user->goal_name,
-            'diet_type' => $user->diet_type,
+            '_id' => $user->_id,
+            '_username' => $user->_username,
+            '_email' => $user->_email,
+            '_full_name' => $user->_full_name,
+            '_avatar' => $user->_avatar,
+            '_dob' => $user->_dob,
+            '_gender' => $user->_gender,
+            '_weight_kg' => $user->_weight_kg,
+            '_height_cm' => $user->_height_cm,
+            '_activity_level' => $user->_activity_level,
+            '_goal' => $user->_goal,
+            'goal_name' => $user->goal_name,            
+            '_diet_type_id' => $user->_diet_type_id,
+            'diet_type' => $user->diet_type,          
             'allergens' => $allergens
         ]);
     }
@@ -79,7 +81,7 @@ class UserController extends Controller
     // Step 2: Update goal and diet type
     public function updateGoalAndDiet(Request $request)
     {
-        $user = JWTAuth::parseToken()->authenticate(); 
+        $user = JWTAuth::parseToken()->authenticate();
 
         $validator = Validator::make($request->all(), [
             '_goal' => 'required|string',

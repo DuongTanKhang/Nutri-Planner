@@ -105,6 +105,7 @@ class UserRepository
                 'u._height_cm',
                 'u._activity_level',
                 'u._goal',
+                'u._diet_type_id',
                 'g._name as goal_name',    
                 'd._name as diet_type'      
             )

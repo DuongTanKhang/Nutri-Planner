@@ -11,7 +11,8 @@ use App\Http\Controllers\Api\{
     GoalDietRecommendationController,
     UserController,
     MealController,
-    FavoriteFoodController
+    FavoriteFoodController,
+    FoodTypeController
 };
 
 // Public APIs (Không cần login)
@@ -25,6 +26,7 @@ Route::get('/goal-diet-recommendations', [GoalDietRecommendationController::clas
 Route::get('/goal-diet-recommendations/filter', [GoalDietRecommendationController::class, 'filterByGoalId']);
 Route::get('/meals-grouped-by-category', [MealController::class, 'groupByCategory']);
 Route::get('/profile/{id}', [UserController::class, 'getProfile']);
+Route::get('/food-types', [FoodTypeController::class, 'index']);
 
 // Auth APIs
 Route::post('/register', [AuthController::class, 'register']);

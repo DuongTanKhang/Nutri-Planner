@@ -24,7 +24,8 @@ class FoodRepository
                 'foods.category',
                 'foods.cuisineType',
                 'foods.dietType',
-                'foods.foodType'
+                'foods.foodType',
+                'foods.foodIngredients.ingredient.allergen'
             ])->get();
 
             return $categories->map(function ($category) {
@@ -32,12 +33,24 @@ class FoodRepository
                     '_id' => $category->_id,
                     '_name' => $category->_name,
                     'foods' => $category->foods->map(function ($food) {
+                        // Tính calories
                         $calories = DB::table('tbl_food_nutrient as fn')
                             ->join('tbl_nutrient as n', 'fn._nutrient_id', '=', 'n._id')
                             ->where('fn._food_id', $food->_id)
                             ->where('n._name', 'Calories')
                             ->select(DB::raw('ROUND(SUM(fn._value_per_100g), 2) as total_calories'))
                             ->value('total_calories') ?? 0;
+
+                        $allergenList = [];
+                        foreach ($food->foodIngredients as $fi) {
+                            if ($fi->ingredient && $fi->ingredient->allergen) {
+                                $a = $fi->ingredient->allergen;
+                                $allergenList[$a->_id] = [
+                                    '_id' => $a->_id,
+                                    '_name' => $a->_name,
+                                ];
+                            }
+                        }
 
                         return [
                             '_id' => $food->_id,
@@ -54,6 +67,7 @@ class FoodRepository
                             'diet_type' => $food->dietType?->_name,
                             'food_type' => $food->foodType?->_name,
                             'calories' => $calories,
+                            'allergens' => array_values($allergenList), // Thêm danh sách dị ứng vào đây
                         ];
                     })
                 ];
@@ -63,6 +77,7 @@ class FoodRepository
             return null;
         }
     }
+
 
 
     /**

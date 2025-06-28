@@ -1,0 +1,144 @@
+<?php
+
+namespace App\Models\reps;
+
+use Illuminate\Support\Facades\DB;
+use App\Models\Category;
+use App\Models\Food;
+use Illuminate\Support\Facades\Log;
+use App\Models\UserAllergen;
+
+class FoodRepository
+{
+    /**
+     * Get all foods grouped by category, with full food data and first image.
+     *
+     * @return \Illuminate\Support\Collection|null
+     */
+    public function getFoodsGroupedByCategory()
+    {
+        try {
+            $categories = Category::with([
+                'foods.firstImage',
+                'foods.meal',
+                'foods.category',
+                'foods.cuisineType',
+                'foods.dietType',
+                'foods.foodType'
+            ])->get();
+
+            return $categories->map(function ($category) {
+                return [
+                    '_id' => $category->_id,
+                    '_name' => $category->_name,
+                    'foods' => $category->foods->map(function ($food) {
+                        $calories = DB::table('tbl_food_nutrient as fn')
+                            ->join('tbl_nutrient as n', 'fn._nutrient_id', '=', 'n._id')
+                            ->where('fn._food_id', $food->_id)
+                            ->where('n._name', 'Calories')
+                            ->select(DB::raw('ROUND(SUM(fn._value_per_100g), 2) as total_calories'))
+                            ->value('total_calories') ?? 0;
+
+                        return [
+                            '_id' => $food->_id,
+                            '_name' => $food->_name,
+                            '_meal_id' => $food->_meal_id,
+                            '_food_type_id' => $food->_food_type_id,
+                            '_cuisine_type_id' => $food->_cuisine_type_id,
+                            '_category_id' => $food->_category_id,
+                            '_diet_type_id' => $food->_diet_type_id,
+                            'image_url' => $food->firstImage?->_image,
+                            'meal' => $food->meal?->_name,
+                            'category' => $food->category?->_name,
+                            'cuisine_type' => $food->cuisineType?->_name,
+                            'diet_type' => $food->dietType?->_name,
+                            'food_type' => $food->foodType?->_name,
+                            'calories' => $calories,
+                        ];
+                    })
+                ];
+            });
+        } catch (\Exception $e) {
+            Log::error('Error fetching foods grouped by category: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+
+    /**
+     * Get detailed food info including ingredients and preparation.
+     *
+     * @param int $id
+     * @return array|null
+     */
+    public function getFoodDetail(int $id, ?int $userId = null): ?array
+    {
+        $food = Food::with([
+            'foodIngredients.ingredient.allergen',
+            'foodIngredients.preparationMethod',
+            'firstImage'
+        ])->find($id);
+
+        if (!$food) return null;
+
+        $userAllergenIds = [];
+
+        if ($userId) {
+            $userAllergenIds = DB::table('tbl_user_allergen')
+                ->where('_user_id', $userId)
+                ->pluck('_allergen_id')
+                ->toArray();
+        }
+
+        $ingredients = $food->foodIngredients->map(function ($fi) use ($userAllergenIds) {
+            $ingredient = $fi->ingredient;
+
+            return [
+                'name' => $ingredient->_name ?? null,
+                'amount' => $fi->_amount,
+                'note' => $fi->_note,
+                'preparation' => $fi->preparationMethod?->_prepar,
+                'allergen' => $ingredient->allergen->_name ?? null,
+                'is_allergen' => $ingredient->_allergen_id && in_array($ingredient->_allergen_id, $userAllergenIds),
+            ];
+        });
+
+        $nutrients = DB::table('tbl_food_nutrient as fn')
+            ->join('tbl_nutrient as n', 'fn._nutrient_id', '=', 'n._id')
+            ->leftJoin('tbl_nutrition_group as g', 'n._group_id', '=', 'g._id')
+            ->select(
+                'n._id as id',
+                'n._name as name',
+                'n._unit as unit',
+                'g._name as group',
+                DB::raw('SUM(fn._amount) as total_ingredient_amount'),
+                DB::raw('ROUND(AVG(fn._value_per_100g), 2) as avg_value_per_100g'),
+                DB::raw('ROUND(SUM((fn._amount / 100.0) * fn._value_per_100g), 2) as value')
+            )
+            ->where('fn._food_id', $id)
+            ->groupBy('n._id', 'n._name', 'n._unit', 'g._name')
+            ->orderBy('g._name')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'unit' => $item->unit,
+                    'group' => $item->group,
+                    'total_ingredient_amount' => (float) $item->total_ingredient_amount,
+                    'avg_value_per_100g' => (float) $item->avg_value_per_100g,
+                    'value' => (float) $item->value,
+                ];
+            })
+            ->toArray();
+
+
+        return [
+            'id' => $food->_id,
+            'name' => $food->_name,
+            'image' => $food->firstImage?->_image,
+            'ingredients' => $ingredients,
+            'nutrients' => $nutrients,
+        ];
+    }
+}

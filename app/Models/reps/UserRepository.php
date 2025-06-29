@@ -89,7 +89,7 @@ class UserRepository
 
     public function getUserDetails(int $user_id): ?object
     {
-        return DB::table($this->table_name . ' as u')
+        $user = DB::table($this->table_name . ' as u')
             ->leftJoin('tbl_diet_type as d', 'u._diet_type_id', '=', 'd._id')
             ->leftJoin('tbl_goal as g', 'u._goal', '=', 'g._id')
             ->where('u._id', $user_id)
@@ -110,7 +110,14 @@ class UserRepository
                 'd._name as diet_type'
             )
             ->first();
+
+        if ($user) {
+            $user->allergens = $this->getUserAllergens($user_id);
+        }
+
+        return $user;
     }
+
 
 
 

@@ -156,14 +156,22 @@ class UserController extends Controller
     }
     public function updateProfile(Request $request)
     {
-        $user = JWTAuth::parseToken()->authenticate(); 
-
+        $user = JWTAuth::parseToken()->authenticate();
         $validated = $request->validate([
             '_full_name' => 'nullable|string|max:255',
             '_dob' => 'nullable|date',
             '_weight_kg' => 'nullable|numeric|min:0',
             '_height_cm' => 'nullable|numeric|min:0',
+            '_avatar' => 'nullable|file|image|max:2048',
         ]);
+
+
+        if ($request->hasFile('_avatar')) {
+            $file = $request->file('_avatar');
+            $filename = 'avatar_' . $user->_id . '_' . time() . '.' . $file->getClientOriginalExtension();
+            $path = $file->storeAs('avatars', $filename, 'public');
+            $validated['_avatar'] = 'storage/' . $path;
+        }
 
         $success = $this->userRepo->updateProfile($user->_id, $validated);
 

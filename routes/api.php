@@ -45,7 +45,7 @@ Route::middleware('auth:api')->group(function () {
     Route::post('/users/update-step2', [UserController::class, 'updateGoalAndDiet']);
     Route::post('/users/update-step3', [UserController::class, 'updateAllergensUser']);
     Route::get('/user/allergens', [UserController::class, 'getUserAllergens']);
-    Route::put('/user/profile', [UserController::class, 'updateProfile']);
+    Route::post('/user/profile', [UserController::class, 'updateProfile']);
 
     // 🔹 Favorite Foods
     Route::post('/favorites/toggle', [FavoriteFoodController::class, 'toggle']);

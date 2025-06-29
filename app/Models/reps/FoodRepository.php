@@ -33,14 +33,6 @@ class FoodRepository
                     '_id' => $category->_id,
                     '_name' => $category->_name,
                     'foods' => $category->foods->map(function ($food) {
-                        // Tính calories
-                        $calories = DB::table('tbl_food_nutrient as fn')
-                            ->join('tbl_nutrient as n', 'fn._nutrient_id', '=', 'n._id')
-                            ->where('fn._food_id', $food->_id)
-                            ->where('n._name', 'Calories')
-                            ->select(DB::raw('ROUND(SUM(fn._value_per_100g), 2) as total_calories'))
-                            ->value('total_calories') ?? 0;
-
                         $allergenList = [];
                         foreach ($food->foodIngredients as $fi) {
                             if ($fi->ingredient && $fi->ingredient->allergen) {
@@ -66,8 +58,8 @@ class FoodRepository
                             'cuisine_type' => $food->cuisineType?->_name,
                             'diet_type' => $food->dietType?->_name,
                             'food_type' => $food->foodType?->_name,
-                            'calories' => $calories,
-                            'allergens' => array_values($allergenList), // Thêm danh sách dị ứng vào đây
+                            'calories' => $this->calculateCaloriesFromIngredients($food),
+                            'allergens' => array_values($allergenList),
                         ];
                     })
                 ];
@@ -118,19 +110,20 @@ class FoodRepository
             ];
         });
 
-        $nutrients = DB::table('tbl_food_nutrient as fn')
-            ->join('tbl_nutrient as n', 'fn._nutrient_id', '=', 'n._id')
+        $nutrients = DB::table('tbl_food_ingredient as fi')
+            ->join('tbl_ingredient_nutrient as ingr_nut', 'fi._ingredient_id', '=', 'ingr_nut._ingredient_id')
+            ->join('tbl_nutrient as n', 'ingr_nut._nutrient_id', '=', 'n._id')
             ->leftJoin('tbl_nutrition_group as g', 'n._group_id', '=', 'g._id')
             ->select(
                 'n._id as id',
                 'n._name as name',
                 'n._unit as unit',
                 'g._name as group',
-                DB::raw('SUM(fn._amount) as total_ingredient_amount'),
-                DB::raw('ROUND(AVG(fn._value_per_100g), 2) as avg_value_per_100g'),
-                DB::raw('ROUND(SUM((fn._amount / 100.0) * fn._value_per_100g), 2) as value')
+                DB::raw('SUM(fi._amount) as total_ingredient_amount'),
+                DB::raw('ROUND(AVG(ingr_nut._value_per_100g), 2) as avg_value_per_100g'),
+                DB::raw('ROUND(SUM((fi._amount / 100.0) * ingr_nut._value_per_100g), 2) as value')
             )
-            ->where('fn._food_id', $id)
+            ->where('fi._food_id', $id)
             ->groupBy('n._id', 'n._name', 'n._unit', 'g._name')
             ->orderBy('g._name')
             ->get()
@@ -148,6 +141,7 @@ class FoodRepository
             ->toArray();
 
 
+
         return [
             'id' => $food->_id,
             'name' => $food->_name,
@@ -155,5 +149,29 @@ class FoodRepository
             'ingredients' => $ingredients,
             'nutrients' => $nutrients,
         ];
+    }
+    private function calculateCaloriesFromIngredients($food): float
+    {
+        $ingredients = $food->foodIngredients;
+
+        $totalCalories = 0;
+
+        foreach ($ingredients as $fi) {
+            $ingredient = $fi->ingredient;
+
+            if ($ingredient) {
+                $caloriesPer100g = DB::table('tbl_ingredient_nutrient as in')
+                    ->join('tbl_nutrient as n', 'in._nutrient_id', '=', 'n._id')
+                    ->where('in._ingredient_id', $ingredient->_id)
+                    ->where('n._name', 'Calories')
+                    ->value('in._value_per_100g');
+                $amountInG = $fi->_amount;
+
+                if (!is_null($caloriesPer100g) && !is_null($amountInG)) {
+                    $totalCalories += ($amountInG / 100) * $caloriesPer100g;
+                }
+            }
+        }
+        return round($totalCalories, 2);
     }
 }

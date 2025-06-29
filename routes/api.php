@@ -42,7 +42,7 @@ Route::middleware('auth:api')->group(function () {
 
     // 🔹 User Profile Steps
     Route::post('/users/update-step1', [UserController::class, 'updateBasicInfo']);
-    Route::post('/users/update-step2', [UserController::class, 'updateGoalAndDiet']);
+    Route::post('/users/update-step2', [UserController::class, 'updateStep2']);
     Route::post('/users/update-step3', [UserController::class, 'updateAllergensUser']);
     Route::get('/user/allergens', [UserController::class, 'getUserAllergens']);
     Route::post('/user/profile', [UserController::class, 'updateProfile']);

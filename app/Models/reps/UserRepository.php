@@ -158,7 +158,7 @@ class UserRepository
         }
     }
 
-    public function updateGoalAndDietOnly(int $user_id, string $goal, int $diet_type_id): bool
+    public function updateGoalDietAndActiveLevel(int $user_id, string $goal, int $diet_type_id, string $active_level): bool
     {
         try {
             return DB::table($this->table_name)
@@ -166,10 +166,11 @@ class UserRepository
                 ->update([
                     '_goal' => $goal,
                     '_diet_type_id' => $diet_type_id,
+                    '_activity_level' => $active_level,
                     '_updated_at' => now()
                 ]);
         } catch (\Exception $e) {
-            Log::error('Update goal and diet failed: ' . $e->getMessage());
+            Log::error('Update goal, diet, and active level failed: ' . $e->getMessage());
             return false;
         }
     }

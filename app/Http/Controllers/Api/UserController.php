@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Validator;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use App\Models\UserAllergen;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class UserController extends Controller
 {
@@ -78,37 +79,57 @@ class UserController extends Controller
     }
 
 
-    // Step 2: Update goal and diet type
-    public function updateGoalAndDiet(Request $request)
+    // Step 2: Update goal, diet type, and active level
+    public function updateStep2(Request $request)
     {
         $user = JWTAuth::parseToken()->authenticate();
 
         $validator = Validator::make($request->all(), [
             '_goal' => 'required|string',
             '_diet_type_id' => 'required|integer|exists:tbl_diet_type,_id',
+            '_activity_level' => 'required|string',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $success = $this->userRepo->updateGoalAndDietOnly(
-            $user->_id,
-            $request->_goal,
-            $request->_diet_type_id
-        );
+        $success = DB::table('tbl_user')->where('_id', $user->_id)->update([
+            '_goal' => $request->_goal,
+            '_diet_type_id' => $request->_diet_type_id,
+            '_activity_level' => $request->_activity_level,
+            '_updated_at' => now()
+        ]);
 
         if ($success) {
-            $updatedUser = $this->userRepo->findById($user->_id);
+            $updatedUser = $this->userRepo->getUserDetails($user->_id);
 
             return response()->json([
-                'message' => 'Goal and diet updated successfully.',
-                'user' => $updatedUser
+                'message' => 'Step 2 completed.',
+                'user' => [
+                    '_id' => $updatedUser->_id,
+                    '_username' => $updatedUser->_username,
+                    '_email' => $updatedUser->_email,
+                    '_full_name' => $updatedUser->_full_name,
+                    '_avatar' => $updatedUser->_avatar,
+                    '_dob' => $updatedUser->_dob,
+                    '_gender' => $updatedUser->_gender,
+                    '_weight_kg' => $updatedUser->_weight_kg,
+                    '_height_cm' => $updatedUser->_height_cm,
+                    '_activity_level' => $updatedUser->_activity_level,
+                    '_goal' => $updatedUser->_goal,
+                    'goal_name' => $updatedUser->goal_name,
+                    '_diet_type_id' => $updatedUser->_diet_type_id,
+                    'diet_type' => $updatedUser->diet_type,
+                    'allergens' => $this->userRepo->getUserAllergens($user->_id)
+                ]
             ]);
         }
 
-        return response()->json(['error' => 'Failed to update goal and diet.'], 500);
+        return response()->json(['error' => 'Failed to update Step 2'], 500);
     }
+
+
 
     // Step 3: Update allergens
     public function updateAllergensUser(Request $request)

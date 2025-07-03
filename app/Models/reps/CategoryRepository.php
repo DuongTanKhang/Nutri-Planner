@@ -16,17 +16,15 @@ class CategoryRepository
     public function getAllActive()
     {
         return $this->model
-            ->where(function ($query) {
-                $query->where('_active', 1);
-            })
+            ->select('_id', '_name') 
+            ->where('_active', 1)
+            ->orderBy('_name')
             ->get();
     }
+
 
     public function find($id)
     {
         return $this->model->find($id);
     }
-
 }
-
-?>

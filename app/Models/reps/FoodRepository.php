@@ -19,15 +19,38 @@ class FoodRepository
     {
         try {
             $categories = Category::with([
-                'foods.firstImage',
-                'foods.meal',
-                'foods.category',
-                'foods.cuisineType',
-                'foods.dietType',
-                'foods.foodType',
-                'foods.foodIngredients.ingredient.allergen'
-            ])->get();
+                'foods' => function ($q) {
+                    $q->select('_id', '_name', '_meal_id', '_food_type_id', '_cuisine_type_id', '_category_id', '_diet_type_id');
+                },
+                'foods.firstImage' => function ($q) {
+                    $q->select('_id', '_food_id', '_image');
+                },
+                'foods.meal' => function ($q) {
+                    $q->select('_id', '_name');
+                },
+                'foods.category' => function ($q) {
+                    $q->select('_id', '_name');
+                },
+                'foods.cuisineType' => function ($q) {
+                    $q->select('_id', '_name');
+                },
+                'foods.dietType' => function ($q) {
+                    $q->select('_id', '_name');
+                },
+                'foods.foodType' => function ($q) {
+                    $q->select('_id', '_name');
+                },
+                'foods.foodIngredients.ingredient' => function ($q) {
+                    $q->select('_id', '_name', '_allergen_id');
+                },
+                'foods.foodIngredients.ingredient.allergen' => function ($q) {
+                    $q->select('_id', '_name');
+                }
+            ])
+                ->select('_id', '_name')
+                ->get();
 
+            // mapping logic giữ nguyên...
             return $categories->map(function ($category) {
                 return [
                     '_id' => $category->_id,
